@@ -18,6 +18,7 @@ import DOM.HTML.Window (requestAnimationFrame)
 import DOM.HTML (window)
 import DOM.HTML.Types (Window)
 import Data.Tuple (Tuple(..), snd)
+import PathFinding (class PFNode, findPath)
 
 -- type Rectangle = { x :: Number, y :: Number, w :: Number, h :: Number }
 rectangle :: Number -> Number -> Number -> Number -> Rectangle
@@ -393,8 +394,21 @@ forEachMatrixElement f m =
                   loop x' y'
   in loop 0 0
 
+cellMatrixNeighbors :: (Matrix Cell) -> Coord -> (Array Coord)
+cellMatrixNeighbors mp pos =
+  adjacentWalkables mp allDirections pos
 
+abs :: Int -> Int
+abs x = if x < 0
+        then -x
+        else x
 
+cellMatrixHeuristic :: (Matrix Cell) -> Coord -> Coord -> Number
+cellMatrixHeuristic mp (Coord ax ay) (Coord bx by) =
+  (toNumber $ (abs (ax-bx))+(abs (ay-by)))
+
+instance coordPFNodeKey :: PFNode Coord where
+  pfNodeKey crd = show crd
            
 drawMap :: forall e. Matrix Cell -> CanvasElement -> Eff (canvas :: CANVAS | e) Unit
 drawMap theMap can = 
@@ -427,6 +441,9 @@ main :: forall e. Eff (dom :: DOM, console :: CONSOLE, random :: RANDOM, canvas 
 main = do
   can <- getCanvasElementById "vis"
   let simState = (makeSimulationState defaultTrack 100 (Coord 0 0))
+      trivialMap = setWall (emptyTrack 3 3) (Coord 1 1) 
+      path = findPath (cellMatrixNeighbors trivialMap) (cellMatrixHeuristic trivialMap) (Coord 0 0) (Coord 2 2)
+  log $ show path
   case can of
     (Just canvas) -> do
       log "Got a canvas"
